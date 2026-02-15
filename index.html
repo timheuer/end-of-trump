@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Presidential Term Countdown</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #1a1a2e;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: #e0e0e0;
+  }
+  h1 {
+    font-size: 1.6rem;
+    font-weight: 300;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 2rem;
+    color: #aaa;
+  }
+  .container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+  }
+  .silhouette-wrap {
+    position: relative;
+    width: 300px;
+    height: 400px;
+  }
+  .silhouette-bg,
+  .silhouette-fill {
+    position: absolute;
+    inset: 0;
+    -webkit-mask-image: url(trump.svg);
+    mask-image: url(trump.svg);
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+  }
+  .silhouette-bg {
+    background: #2a2a3e;
+  }
+  .silhouette-fill {
+    background: linear-gradient(to bottom, #ffb347, #ff6600);
+    clip-path: inset(0 0 0 0);
+  }
+  .silhouette-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    padding-bottom: 30px;
+    pointer-events: none;
+  }
+  .pct {
+    font-size: 56px;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+  }
+  .remaining-label {
+    font-size: 14px;
+    color: #ccc;
+    letter-spacing: 0.1em;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+  }
+  .stats {
+    display: flex;
+    gap: 2.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .stat {
+    text-align: center;
+  }
+  .stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #ff8c00;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #888;
+    margin-top: 0.25rem;
+  }
+  .clock {
+    font-size: 1rem;
+    color: #666;
+    font-variant-numeric: tabular-nums;
+    margin-top: 0.5rem;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Presidential Term Countdown</h1>
+
+  <div class="silhouette-wrap">
+    <div class="silhouette-bg"></div>
+    <div class="silhouette-fill" id="silhouetteFill"></div>
+    <div class="silhouette-text">
+      <div class="pct" id="pctText">100%</div>
+      <div class="remaining-label">REMAINING</div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-value" id="daysLeft">—</div>
+      <div class="stat-label">Days Left</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="daysElapsed">—</div>
+      <div class="stat-label">Days Elapsed</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="endDate"></div>
+      <div class="stat-label">Term Ends</div>
+    </div>
+  </div>
+
+  <div class="clock" id="clock"></div>
+</div>
+
+<script>
+  const START = new Date('2025-01-20T12:00:00-05:00').getTime();
+  const END   = new Date('2029-01-20T11:59:00-05:00').getTime();
+  const TOTAL = END - START;
+
+  const fillEl    = document.getElementById('silhouetteFill');
+  const pctText   = document.getElementById('pctText');
+  const daysLeft  = document.getElementById('daysLeft');
+  const daysElapsed = document.getElementById('daysElapsed');
+  const endDateEl = document.getElementById('endDate');
+  const clockEl   = document.getElementById('clock');
+
+  // Format end date in user's locale
+  const endDateObj = new Date(END);
+  endDateEl.textContent = endDateObj.toLocaleDateString(undefined, {
+    year: 'numeric', month: 'short', day: 'numeric'
+  });
+
+  function update() {
+    const now = Date.now();
+    const elapsed = Math.max(0, Math.min(TOTAL, now - START));
+    const remaining = TOTAL - elapsed;
+    const pct = remaining / TOTAL;
+
+    // Clip from top: inset(elapsedPct 0 0 0) reveals only the remaining portion
+    const clipTop = ((1 - pct) * 100).toFixed(4);
+    fillEl.style.clipPath = `inset(${clipTop}% 0 0 0)`;
+
+    // Update percentage text
+    pctText.textContent = Math.round(pct * 100) + '%';
+
+    // Update days
+    const msPerDay = 86400000;
+    daysLeft.textContent = Math.floor(remaining / msPerDay).toLocaleString();
+    daysElapsed.textContent = Math.floor(elapsed / msPerDay).toLocaleString();
+
+    // Countdown clock (d h m s)
+    const totalSec = Math.floor(remaining / 1000);
+    const d = Math.floor(totalSec / 86400);
+    const h = Math.floor((totalSec % 86400) / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    clockEl.textContent = `${d}d ${h}h ${m}m ${s}s remaining`;
+  }
+
+  update();
+  setInterval(update, 1000);
+</script>
+
+</body>
+</html>
