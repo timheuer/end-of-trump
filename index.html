@@ -105,6 +105,51 @@
     font-variant-numeric: tabular-nums;
     margin-top: 0.5rem;
   }
+  .quote-ticker {
+    max-width: 500px;
+    text-align: center;
+    font-style: italic;
+    color: #777;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    min-height: 3em;
+    transition: opacity 0.5s;
+  }
+  .quote-ticker .quote-attr {
+    font-style: normal;
+    color: #555;
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+  }
+  .fired-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .fired-overlay.active {
+    display: flex;
+  }
+  .fired-text {
+    font-size: clamp(3rem, 10vw, 8rem);
+    font-weight: 900;
+    color: #ff4500;
+    text-shadow: 0 0 40px rgba(255,69,0,0.6);
+    animation: fireGlow 1.5s ease-in-out infinite alternate;
+  }
+  .fired-sub {
+    font-size: 1.2rem;
+    color: #aaa;
+  }
+  @keyframes fireGlow {
+    from { text-shadow: 0 0 20px rgba(255,69,0,0.4); transform: scale(1); }
+    to { text-shadow: 0 0 60px rgba(255,69,0,0.8); transform: scale(1.03); }
+  }
 </style>
 </head>
 <body>
@@ -137,6 +182,13 @@
   </div>
 
   <div class="clock" id="clock"></div>
+
+  <div class="quote-ticker" id="quoteTicker"></div>
+</div>
+
+<div class="fired-overlay" id="firedOverlay">
+  <div class="fired-text">YOU'RE FIRED!</div>
+  <div class="fired-sub">Term has ended.</div>
 </div>
 
 <script>
@@ -144,12 +196,76 @@
   const END   = new Date('2029-01-20T11:59:00-05:00').getTime();
   const TOTAL = END - START;
 
-  const fillEl    = document.getElementById('silhouetteFill');
-  const pctText   = document.getElementById('pctText');
-  const daysLeft  = document.getElementById('daysLeft');
+  const fillEl      = document.getElementById('silhouetteFill');
+  const pctText     = document.getElementById('pctText');
+  const daysLeft    = document.getElementById('daysLeft');
   const daysElapsed = document.getElementById('daysElapsed');
-  const endDateEl = document.getElementById('endDate');
-  const clockEl   = document.getElementById('clock');
+  const endDateEl   = document.getElementById('endDate');
+  const clockEl     = document.getElementById('clock');
+  const quoteTicker = document.getElementById('quoteTicker');
+  const firedOverlay = document.getElementById('firedOverlay');
+
+  const quotes = [
+    { text: "Despite the constant negative press covfefe", year: "2017" },
+    { text: "I have the best words.", year: "2015" },
+    { text: "I'm, like, really smart. A very stable genius.", year: "2018" },
+    { text: "Nobody knows more about taxes than I do, maybe in the history of the world.", year: "2016" },
+    { text: "I think I am, actually humble. I think I'm much more humble than you would understand.", year: "2015" },
+    { text: "It's going to be huge. Believe me.", year: "" },
+    { text: "I could stand in the middle of Fifth Avenue and shoot somebody, and I wouldn't lose any voters.", year: "2016" },
+    { text: "Nobody has better respect for intelligence than Donald Trump.", year: "2016" },
+    { text: "I have a very good brain and I've said a lot of things.", year: "2016" },
+    { text: "I know words. I have the best words.", year: "2015" },
+    { text: "Sorry losers and haters, but my I.Q. is one of the highest.", year: "2013" },
+    { text: "Nobody builds walls better than me, believe me.", year: "2015" },
+    { text: "I will be the greatest jobs president that God ever created.", year: "2015" },
+    { text: "I'm the least racist person you have ever interviewed.", year: "2018" },
+    { text: "I'm speaking with myself, number one, because I have a very good brain.", year: "2016" },
+    { text: "We're going to have the greatest economy in the history of our country. Maybe in the history of the world.", year: "2025" },
+    { text: "I want to be king. I want to be ruler.", year: "2025" },
+    { text: "We have a thing called the Constitution, which I cherish. But it doesn't always work the way we want it to.", year: "2025" },
+    { text: "We're going to get Greenland and we're going to get the Panama Canal back.", year: "2025" },
+    { text: "I said I was going to do things that nobody thought were possible. And I've done them on Day 1.", year: "2025" },
+    { text: "I think I would have been a good general, actually.", year: "2025" },
+    { text: "DOGE is doing an incredible job. Elon is a friend of mine and he's a genius.", year: "2025" },
+    { text: "We're going to make Canada the 51st state. It would be a great state.", year: "2025" },
+    { text: "The tariffs are going to make us rich. Incredibly rich. The richest.", year: "2025" },
+    { text: "Nobody's ever seen anything like what we're doing. It's never been done before.", year: "2025" },
+    { text: "I've known Jeff for fifteen years. Terrific guy. He's a lot of fun to be with. It is even said that he likes beautiful women as much as I do, and many of them are on the younger side.", year: "2002" },
+    { text: "You know what the magnet is? They have a thing called mag-a-lev... And if the ship gets hit by a missile, the electric goes out, the computer goes out, and guess what? The catapult is dead.", year: "2017" },
+    { text: "I said, 'What system are you going to be on?' 'Sir, we're using electromagnets.' I said, 'No, you're not. You're going to goddamn steam.'", year: "2017" },
+    { text: "Look, having nuclear — my uncle was a great professor at MIT... good genes, very good genes, OK, very smart... you know, if you're a conservative Republican... it's amazing how good I've been.", year: "2016" },
+    { text: "I see the disinfectant, where it knocks it out in one minute. And is there a way we can do something like that, by injection inside or almost a cleaning?", year: "2020" },
+    { text: "If you have a windmill anywhere near your house... they say the noise causes cancer.", year: "2019" },
+    { text: "I never understood wind. I know windmills very much, I've studied it better than anybody. They're made in China and Germany mostly, very few made here. But they're manufactured — tremendous, if you're into this — tremendous fumes.", year: "2019" },
+    { text: "They want to have windmills all over the place... and you know what they don't tell you about windmills? They kill the birds and the whales.", year: "2023" },
+    { text: "The windmills are driving the whales crazy. They're washing up on shore.", year: "2023" },
+    { text: "China makes the magnets. Without the magnets, basically, the whole thing doesn't work.", year: "2023" },
+    { text: "You go out and you want to buy some groceries... and you can't afford it. The grocery bill is two, three, four times what it was just a few years ago.", year: "2024" },
+    { text: "I want to bring back the incandescent light bulb because I look better under an incandescent light than these horrible lights.", year: "2023" },
+    { text: "They had to rake the leaves. You wouldn't believe how fast that fire goes away once you rake the leaves.", year: "2018" },
+    { text: "I looked right at it.", year: "2017", note: "on the solar eclipse" },
+    { text: "I think there's blame on both sides, and I have no doubt about it.", year: "2017", note: "on Charlottesville" },
+    { text: "Why can't we use nuclear weapons?", year: "2016" },
+    { text: "I don't stand by anything.", year: "2017" },
+    { text: "So there's a shark 10 yards away from the boat, 10 yards, or here. Do I get electrocuted if the boat is sinking, and water goes over the battery... and I'm in the water? Do I stay on top of the boat and get electrocuted, or do I jump over by the shark and not get electrocuted? I'll take electrocution every single time.", year: "2023" },
+    { text: "The electric car thing is not going to work. They don't go far enough, they cost too much, and they're all made in China.", year: "2023" },
+    { text: "The boats, they want to make them all electric. The problem is the boat is so heavy it can't float.", year: "2023" },
+    { text: "The word is 'grocery.' It's a very old word. They don't use it too much anymore. Grocery. We need grocery. Groceries. We need everything.", year: "2025" },
+  ];
+
+  let currentQuote = Math.floor(Math.random() * quotes.length);
+  function showQuote() {
+    const q = quotes[currentQuote];
+    quoteTicker.style.opacity = '0';
+    setTimeout(() => {
+      quoteTicker.innerHTML = `\u201c${q.text}\u201d<div class="quote-attr">${q.year ? '\u2014 ' + q.year : ''}${q.note ? ' (' + q.note + ')' : ''}</div>`;
+      quoteTicker.style.opacity = '1';
+    }, 500);
+    currentQuote = (currentQuote + 1) % quotes.length;
+  }
+  showQuote();
+  setInterval(showQuote, 8000);
 
   // Format end date in user's locale
   const endDateObj = new Date(END);
@@ -174,6 +290,11 @@
     const msPerDay = 86400000;
     daysLeft.textContent = Math.floor(remaining / msPerDay).toLocaleString();
     daysElapsed.textContent = Math.floor(elapsed / msPerDay).toLocaleString();
+
+    // Show YOU'RE FIRED when term ends
+    if (pct <= 0) {
+      firedOverlay.classList.add('active');
+    }
 
     // Countdown clock (d h m s)
     const totalSec = Math.floor(remaining / 1000);
