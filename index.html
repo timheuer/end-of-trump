@@ -9,6 +9,36 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg: #1a1a2e;
+            --text: #e0e0e0;
+            --silhouette-bg: #2a2a3e;
+            --pct-color: #fff;
+            --pct-shadow: rgba(0, 0, 0, 0.7);
+            --label-color: #ccc;
+            --stat-label: #888;
+            --clock-color: #666;
+            --quote-color: #777;
+            --quote-attr: #555;
+            --fired-bg: rgba(0, 0, 0, 0.85);
+            --fired-sub: #aaa;
+        }
+
+        .light {
+            --bg: #f5f5f5;
+            --text: #222;
+            --silhouette-bg: #ddd;
+            --pct-color: #fff;
+            --pct-shadow: rgba(0, 0, 0, 0.5);
+            --label-color: #eee;
+            --stat-label: #666;
+            --clock-color: #888;
+            --quote-color: #555;
+            --quote-attr: #888;
+            --fired-bg: rgba(255, 255, 255, 0.9);
+            --fired-sub: #555;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -21,9 +51,10 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            background: #1a1a2e;
+            background: var(--bg);
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            color: #e0e0e0;
+            color: var(--text);
+            transition: background 0.3s, color 0.3s;
         }
 
         h1 {
@@ -64,7 +95,7 @@
         }
 
         .silhouette-bg {
-            background: #2a2a3e;
+            background: var(--silhouette-bg);
         }
 
         .silhouette-fill {
@@ -86,15 +117,16 @@
         .pct {
             font-size: 56px;
             font-weight: 700;
-            color: #fff;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+            color: var(--pct-color);
+            text-shadow: 0 2px 8px var(--pct-shadow);
         }
 
         .remaining-label {
             font-size: 14px;
-            color: #ccc;
+            color: #fff;
             letter-spacing: 0.1em;
-            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+            text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.7);
+            font-weight: 600;
         }
 
         .stats {
@@ -119,13 +151,13 @@
             font-size: 0.75rem;
             text-transform: uppercase;
             letter-spacing: 0.08em;
-            color: #888;
+            color: var(--stat-label);
             margin-top: 0.25rem;
         }
 
         .clock {
             font-size: 1rem;
-            color: #666;
+            color: var(--clock-color);
             font-variant-numeric: tabular-nums;
             margin-top: 0.5rem;
         }
@@ -134,7 +166,7 @@
             max-width: 500px;
             text-align: center;
             font-style: italic;
-            color: #777;
+            color: var(--quote-color);
             font-size: 0.9rem;
             line-height: 1.5;
             min-height: 3em;
@@ -143,7 +175,7 @@
 
         .quote-ticker .quote-attr {
             font-style: normal;
-            color: #555;
+            color: var(--quote-attr);
             font-size: 0.75rem;
             margin-top: 0.25rem;
         }
@@ -164,7 +196,7 @@
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.85);
+            background: var(--fired-bg);
             z-index: 100;
             align-items: center;
             justify-content: center;
@@ -186,7 +218,30 @@
 
         .fired-sub {
             font-size: 1.2rem;
-            color: #aaa;
+            color: var(--fired-sub);
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: 1px solid var(--stat-label);
+            color: var(--text);
+            font-size: 1.4rem;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.3s, color 0.3s;
+            z-index: 50;
+        }
+
+        .theme-toggle:hover {
+            border-color: #ff8c00;
         }
 
         @keyframes fireGlow {
@@ -204,6 +259,8 @@
 </head>
 
 <body>
+
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle light/dark theme">☾</button>
 
     <div class="container">
         <h1>Tremendous Countdown. The Best Countdown.</h1>
@@ -356,6 +413,20 @@
 
         update();
         setInterval(update, 1000);
+
+        // Theme toggle
+        const themeBtn = document.getElementById('themeToggle');
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'light') document.body.classList.add('light');
+        function updateIcon() {
+            themeBtn.textContent = document.body.classList.contains('light') ? '\u2600' : '\u263E';
+        }
+        updateIcon();
+        themeBtn.addEventListener('click', () => {
+            document.body.classList.toggle('light');
+            localStorage.setItem('theme', document.body.classList.contains('light') ? 'light' : 'dark');
+            updateIcon();
+        });
     </script>
 
 </body>
