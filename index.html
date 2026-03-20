@@ -380,28 +380,39 @@
             year: 'numeric', month: 'short', day: 'numeric'
         });
 
-        function update() {
+        function getCountdownState() {
             const now = Date.now();
             const elapsed = Math.max(0, Math.min(TOTAL, now - START));
             const remaining = TOTAL - elapsed;
             const pct = remaining / TOTAL;
 
+            return { elapsed, remaining, pct };
+        }
+
+        function renderVisuals(pct, displayPct = Math.round(pct * 100)) {
+            const safePct = Math.max(0, Math.min(1, pct));
+            const safeDisplayPct = Math.max(0, Math.min(100, displayPct));
+
             // Clip from top: inset(elapsedPct 0 0 0) reveals only the remaining portion
-            const clipTop = ((1 - pct) * 100).toFixed(4);
+            const clipTop = ((1 - safePct) * 100).toFixed(4);
             fillEl.style.clipPath = `inset(${clipTop}% 0 0 0)`;
 
             // Update percentage text
-            pctText.textContent = Math.round(pct * 100) + '%';
+            pctText.textContent = `${safeDisplayPct}%`;
+
+            // Show YOU'RE FIRED when term ends
+            if (safePct <= 0) {
+                firedOverlay.classList.add('active');
+            }
+        }
+
+        function renderTime(state) {
+            const { elapsed, remaining } = state;
 
             // Update days
             const msPerDay = 86400000;
             daysLeft.textContent = Math.floor(remaining / msPerDay).toLocaleString();
             daysElapsed.textContent = Math.floor(elapsed / msPerDay).toLocaleString();
-
-            // Show YOU'RE FIRED when term ends
-            if (pct <= 0) {
-                firedOverlay.classList.add('active');
-            }
 
             // Countdown clock (d h m s)
             const totalSec = Math.floor(remaining / 1000);
@@ -412,21 +423,58 @@
             clockEl.textContent = `${d}d ${h}h ${m}m ${s}s remaining`;
         }
 
-        // On first render, animate from 100% fill down to the current value.
-        // Two rAF calls ensure the browser paints the initial 100% state before
-        // the clip-path transition to the actual current value is triggered.
-        fillEl.style.clipPath = 'inset(0% 0 0 0)';
-        requestAnimationFrame(() => {
+        function update() {
+            const state = getCountdownState();
+            renderVisuals(state.pct);
+            renderTime(state);
+        }
+
+        function animateIntro() {
+            const state = getCountdownState();
+            const targetPct = state.pct;
+            const targetDisplayPct = Math.round(targetPct * 100);
+            const digitSteps = Math.max(0, 100 - targetDisplayPct);
+            const duration = Math.min(3000, Math.max(1200, digitSteps * 35));
+            const startTime = performance.now();
+            const targetClipTop = ((1 - targetPct) * 100).toFixed(4);
+
+            renderTime(state);
+            renderVisuals(1, 100);
+
+            // Let the browser paint the initial 100% state before transitioning the fill.
             requestAnimationFrame(() => {
-                update();
-                fillEl.addEventListener('transitionend', (e) => {
-                    if (e.propertyName === 'clip-path') {
-                        fillEl.style.transition = 'none';
-                    }
-                }, { once: true });
+                requestAnimationFrame(() => {
+                    fillEl.style.clipPath = `inset(${targetClipTop}% 0 0 0)`;
+                    fillEl.addEventListener('transitionend', (e) => {
+                        if (e.propertyName === 'clip-path') {
+                            fillEl.style.transition = 'none';
+                        }
+                    }, { once: true });
+                });
             });
-        });
-        setInterval(update, 1000);
+
+            function frame(now) {
+                const progress = Math.min((now - startTime) / duration, 1);
+                const easedProgress = 1 - Math.pow(1 - progress, 3);
+                const animatedDisplayPct = digitSteps > 0
+                    ? Math.max(targetDisplayPct, 100 - Math.floor(easedProgress * digitSteps))
+                    : 100;
+
+                pctText.textContent = `${animatedDisplayPct}%`;
+
+                if (progress < 1) {
+                    requestAnimationFrame(frame);
+                    return;
+                }
+
+                update();
+                setInterval(update, 1000);
+            }
+
+            requestAnimationFrame(frame);
+        }
+
+        animateIntro();
 
         // Theme toggle
         const themeBtn = document.getElementById('themeToggle');
