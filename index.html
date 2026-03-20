@@ -101,6 +101,7 @@
         .silhouette-fill {
             background: linear-gradient(to bottom, #ffb347, #ff6600);
             clip-path: inset(0 0 0 0);
+            transition: clip-path 2s ease-out;
         }
 
         .silhouette-text {
@@ -411,7 +412,20 @@
             clockEl.textContent = `${d}d ${h}h ${m}m ${s}s remaining`;
         }
 
-        update();
+        // On first render, animate from 100% fill down to the current value.
+        // Two rAF calls ensure the browser paints the initial 100% state before
+        // the clip-path transition to the actual current value is triggered.
+        fillEl.style.clipPath = 'inset(0% 0 0 0)';
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                update();
+                fillEl.addEventListener('transitionend', (e) => {
+                    if (e.propertyName === 'clip-path') {
+                        fillEl.style.transition = 'none';
+                    }
+                }, { once: true });
+            });
+        });
         setInterval(update, 1000);
 
         // Theme toggle
